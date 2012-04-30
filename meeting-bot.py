@@ -2,6 +2,8 @@
 import socket
 import random
 import string
+import os
+import sys
 
 class IRCConnecting:
     def __init__(self):
@@ -26,7 +28,7 @@ class IRCConnecting:
     def initiateConnection(self):
         self.irc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    def connect(self):
+    def connectServer(self):
         self.irc.connect((self.settingDictionary["server"], int(self.settingDictionary["port"])))
 
     def login(self, nickname, username='username', realname='realname', hostname='hostname', servername='servername'):
@@ -39,6 +41,16 @@ class IRCConnecting:
     def join(self, channel):
         self.sendData("JOIN %s" % channel)
 
+    def connectCombo(self):
+        """Do connect server, login, join room, stay connected"""
+        self.initiateConnection()
+        self.connectServer()
+        self.login(mb.settingDictionary['nick'])
+        self.join(mb.settingDictionary['channel'])
+        childPID = os.fork()
+        if childPID == 0:
+            self.stayConnected()
+
     def stayConnected(self):
         while (1):
             buffer = self.irc.recv(1024)
@@ -46,17 +58,19 @@ class IRCConnecting:
             msg = string.split(buffer)
             if msg[0] == "PING":
                 self.sendData("PONG %s" % msg[1])
-            if msg[0] == ".quit":
-                self.sendData("QUIT")
+            if msg[-1] == ":.quit":
+                print msg[-1]
+                sys.exit()
+                  
 
 class IRCMeeting(IRCConnecting):
     def __init__(self):
-        None
+        super(IRCMee, self).__init__()
+
+
 
 if __name__ == '__main__':
     mb = IRCConnecting()
-    mb.initiateConnection()
-    mb.connect()
-    mb.login(mb.settingDictionary['nick'])
-    mb.join(mb.settingDictionary['channel'])
-    mb.stayConnected()
+    mb.connectCombo()
+    for i in range(100):
+        print "test"
