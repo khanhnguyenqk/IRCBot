@@ -5,9 +5,12 @@ import string
 import os
 import sys
 
+from multiprocessing import Process, Value
+
 class IRCConnecting:
     def __init__(self):
         self.settingDictionary = self.readConfigFile()
+        lock = Value('i', 0)
 
     def test(self):
         for key in self.settingDictionary.keys():
@@ -51,23 +54,24 @@ class IRCConnecting:
         if childPID == 0:
             self.stayConnected()
 
-    def stayConnected(self):
+    def stayConnected(self, lock):
         while (1):
             buffer = self.irc.recv(1024)
-            print "Server says: %s" % buffer
             msg = string.split(buffer)
             if msg[0] == "PING":
                 self.sendData("PONG %s" % msg[1])
             if msg[-1] == ":.quit":
                 print msg[-1]
                 sys.exit()
-                  
+
+    def forkStayConnected(self, lock):
+        
+
+    def exit(self)
 
 class IRCMeeting(IRCConnecting):
     def __init__(self):
         super(IRCMee, self).__init__()
-
-
 
 if __name__ == '__main__':
     mb = IRCConnecting()
