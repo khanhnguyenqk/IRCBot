@@ -4,17 +4,19 @@ import random
 import string
 import os
 import sys
+import time
 
 from multiprocessing import Process, Value
 
 class IRCConnecting:
     def __init__(self):
         self.settingDictionary = self.readConfigFile()
-        lock = Value('i', 0)
-
-    def test(self):
-        for key in self.settingDictionary.keys():
-            print ("%s = %s" % (key, self.settingDictionary[key]))
+        # 0: initiated
+        #1: connecting in side loop 
+        #2: ask to be disconnected
+        #3: disconnected
+        #4: running extra feature
+        self.status = Value('i',0) 
 
     def readConfigFile(self, filePath='meeting-botrc'):
         f = open(filePath)
@@ -44,30 +46,64 @@ class IRCConnecting:
     def join(self, channel):
         self.sendData("JOIN %s" % channel)
 
-    def connectCombo(self):
+    def run(self):
         """Do connect server, login, join room, stay connected"""
         self.initiateConnection()
         self.connectServer()
         self.login(mb.settingDictionary['nick'])
         self.join(mb.settingDictionary['channel'])
-        childPID = os.fork()
-        if childPID == 0:
-            self.stayConnected()
+        p = Process(target=self.forkStayConnected, args=(self.status, ))
+        p.start()
 
-    def stayConnected(self, lock):
+        self.startDoingExtra()
+        while self.status.value == 4:
+            self.doExtra()
+            print "---------------------------------------"
+            print "Start waiting"
+            print "---------------------------------------"
+            time.sleep(30)
+            print "---------------------------------------"
+            print "Stop waiting"
+            print "---------------------------------------"
+            self.stopDoingExtra()
+        p.join()
+
+    def forkStayConnected(self, status):
+        status.value = 1
         while (1):
             buffer = self.irc.recv(1024)
             msg = string.split(buffer)
+            print "Server says: %s" % buffer
+            if msg[-1] == ":.quit":
+                if status.value != 1:
+                    self.sendData("PRIVMSG Can't disconnect. Check if I'm doing something.")
+                elif status.value == 1:
+                    self.sendData("Bye!")
+                    status.value = 3
+                    self.irc.close()
+                    sys.exit() 
             if msg[0] == "PING":
                 self.sendData("PONG %s" % msg[1])
-            if msg[-1] == ":.quit":
-                print msg[-1]
-                sys.exit()
 
-    def forkStayConnected(self, lock):
-        
+    def disconnect(self):
+        if self.status.value == 1:
+            self.status.value = 2
+        while 1:
+            if self.status.value == 3:
+                self.irc.close()
+                break
 
-    def exit(self)
+    def doExtra(self):
+        None
+
+    def startDoingExtra(self):
+        while self.status.value != 1:
+            time.sleep(1)
+        self.status.value = 4
+
+    def stopDoingExtra(self):
+        if self.status.value == 4:
+            self.status.value = 1
 
 class IRCMeeting(IRCConnecting):
     def __init__(self):
@@ -75,6 +111,4 @@ class IRCMeeting(IRCConnecting):
 
 if __name__ == '__main__':
     mb = IRCConnecting()
-    mb.connectCombo()
-    for i in range(100):
-        print "test"
+    mb.run()
