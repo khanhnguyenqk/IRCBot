@@ -43,6 +43,9 @@ class IRCConnecting:
     def sendData(self, command):
         self.irc.send(command + '\n')
 
+    def sendPrivMessage(self, msg):
+        self.sendData("PRIVMSG %s :%s" % (self.settingDictionary["channel"], msg))
+
     def join(self, channel):
         self.sendData("JOIN %s" % channel)
 
@@ -58,14 +61,6 @@ class IRCConnecting:
         self.startDoingExtra()
         while self.status.value == 4:
             self.doExtra()
-            print "---------------------------------------"
-            print "Start waiting"
-            print "---------------------------------------"
-            time.sleep(30)
-            print "---------------------------------------"
-            print "Stop waiting"
-            print "---------------------------------------"
-            self.stopDoingExtra()
         p.join()
 
     def forkStayConnected(self, status):
@@ -76,7 +71,7 @@ class IRCConnecting:
             print "Server says: %s" % buffer
             if msg[-1] == ":.quit":
                 if status.value != 1:
-                    self.sendData("PRIVMSG Can't disconnect. Check if I'm doing something.")
+                    self.sendPrivMessage("Can't disconnect. Check if I'm doing something.")
                 elif status.value == 1:
                     self.sendData("Bye!")
                     status.value = 3
@@ -94,6 +89,7 @@ class IRCConnecting:
                 break
 
     def doExtra(self):
+        """Abstract Method. Put what you want to do here. Always call stopDoingExtra at the end"""
         None
 
     def startDoingExtra(self):
@@ -106,9 +102,16 @@ class IRCConnecting:
             self.status.value = 1
 
 class IRCMeeting(IRCConnecting):
-    def __init__(self):
-        super(IRCMee, self).__init__()
+    def doExtra(self):
+        print "-----------------------"
+        print "Start sleeping"
+        print "-----------------------"
+        time.sleep(25)
+        print "-----------------------"
+        print "Stop sleeping"
+        print "-----------------------"
+        self.stopDoingExtra()
 
 if __name__ == '__main__':
-    mb = IRCConnecting()
+    mb = IRCMeeting()
     mb.run()
