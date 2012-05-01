@@ -103,14 +103,24 @@ class IRCConnecting:
 
 class IRCMeeting(IRCConnecting):
     def doExtra(self):
-        print "-----------------------"
-        print "Start sleeping"
-        print "-----------------------"
-        time.sleep(25)
-        print "-----------------------"
-        print "Stop sleeping"
-        print "-----------------------"
-        self.stopDoingExtra()
+        while self.status.value == 4:
+            print "------------------------"
+            print "Doing extra"
+            print "------------------------"
+
+            buffer = self.irc.recv(1024)
+            msg = string.split(buffer)
+            
+            if msg[-1] == ":.end":
+                print "------------------------"
+                print "Ending extra loop"
+                print "------------------------"
+                self.stopDoingExtra()
+                break
+            if msg[-1] == ":.names":
+                self.sendData("NAMES")
+            else:
+                self.sendPrivMessage("You said: %s" % msg[-1])
 
 if __name__ == '__main__':
     mb = IRCMeeting()
