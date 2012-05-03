@@ -36,7 +36,8 @@ class IRCConnecting:
     def connectServer(self):
         self.irc.connect((self.settingDictionary["server"], int(self.settingDictionary["port"])))
 
-    def login(self, nickname, username='username', realname='realname', hostname='hostname', servername='servername'):
+    def login(self, nickname, username='username', realname='realname', \
+        hostname='hostname', servername='servername'):
         self.sendData("USER %s %s %s %s" % (username, hostname, servername, realname))
         self.sendData("NICK " + nickname)
 
